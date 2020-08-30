@@ -1,0 +1,16 @@
+server:
+  port: 9999
+
+spring:
+  resources:
+    staticLocations: classpath:/html/
+
+qmframework:
+  # ※※※※※※※※※通讯配置※※※※※※※※※
+  transmit:
+    # 请求数据时，最外层的key名(rest风格)
+    request-key: 'value'
+    # 返回数据时，最外层的key名(rest风格)
+    response-key: 'value'
+    # 返回数据时，默认message的语言 EN/CN
+    response-message-lang: EN

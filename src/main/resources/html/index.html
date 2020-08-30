@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!--将默认的头 <html lang="en"> 引入thymeleaf-->
+<html lang="en">
+<style>
+    .main {
+        padding-top: 60px;
+    }
+
+    .time_input {
+        max-width: 100px;
+    }
+
+    .btn {
+        background: #34779a;
+        width: 80px;
+        BORDER: #34779a 1px solid;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        color: #bdf;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        border-radius: 5px;
+    }
+
+    .btn:hover {
+        background: #053650;
+    }
+</style>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>自動化簡易脚本</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/alert-msg.css" rel="stylesheet">
+    <link rel="shortcut icon" href="./static/favicon.ico">
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">自動化簡易脚本</a>
+        </div>
+    </div>
+</nav>
+<div class="container main">
+    <div class="row">
+        <div class="col-md-3">
+            <h1>使用說明：</h1>
+            <p>僅供學習使用,開源開放,歡迎共同完善</p>
+            <p>按鍵為鍵碼,想知道鍵碼對應的按鍵位置請自行課外參考</p>
+            <p>點擊啟動後會延遲5秒進行噢</p>
+        </div>
+        <div class="col-md-9">
+            <div class="row">
+                <form id="contentForm" class="form-horizontal">
+                    <div class="form-group" style="text-align: right;">
+                        <button type="button" id="insertDiv" style="width: 60px;" class="btn btn-primary">添加</button>
+                        <button type="button" id="removeDiv" style="width: 60px;" class="btn btn-danger">移除</button>
+                        <button type="button" id="run" style="width: 100px;" class="btn btn-success">启动</button>
+                        <button type="button" id="stop" style="width: 150px;" class="btn btn-danger">停止</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row">
+                <span class="input-group-addon">
+                    <div class="row">
+                        <label for="timer" class="col-sm-2 control-label" style="padding-top: 7px;">定时提醒(ms):</label>
+                        <div class="col-sm-2">
+                            <input type="number" id="timer" class="form-control " value="1800" placeholder="間隔">
+                        </div>
+                        <div class="col-sm-8">
+                            <button onclick="starTime()" class="btn btn-primary">启动提醒</button>
+                            <button onclick="stopTime()" class="btn btn-danger">停止提醒</button>
+                            <button onclick="stopPlayMusic()" class="btn btn-danger">停止播放</button>
+                            <button onclick="clearTime()" class="btn btn-success">清空时间</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <audio id="timerMp3" src="static/tips2.mp3" controls="controls">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <div id="timeLog" class="row">
+                    </div>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END example start/stop -->
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="./js/jquery-3.5.1-min.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="./js/bootstrap.min.js"></script>
+<script src="./js/alert-msg.js"></script>
+<script src="./js/jquery.timers-1.2.js"></script>
+</body>
+<script>
+    var x = 60
+    var arrDivSize = 0
+    $(function () {
+        // 监听
+        $("#run").click(() => run())
+        $("#stop").click(() => stop())
+        $("#insertDiv").click(() => insertDiv(1, false))
+        $("#removeDiv").click(() => removeDiv(1))
+
+        insertDiv(2)
+
+    })
+
+    function run() {
+        let scriptParams = [];
+        for (let i = 0; i < arrDivSize; i++) {
+            let is = $("#step" + (i + 1)).is(':checked')
+            if (!is) {
+                continue
+            }
+            let entry = {
+                keyCode: parseInt($("#btx" + (i + 1)).val()),
+                second: parseInt($("#time" + (i + 1)).val()),
+                errNum: parseInt($("#errNum" + (i + 1)).val())
+            }
+            if (entry.errNum === undefined || entry.errNum == '' || entry.errNum < 0) {
+                entry.errNum = 1
+                $("#errNum" + (i + 1)).val(entry.errNum)
+            }
+            scriptParams.push(entry)
+        }
+        $.ajax({
+            type: 'POST',
+            url: 'app/run',
+            async: false,
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({"value": {scriptParams}}),
+            success: function (res) {
+                if (res.value.code === 1) {
+                    success_prompt(res.value.msg, 1300)
+                    canUseBtn(false)
+                } else {
+                    fail_prompt(res.value.msg, 1300)
+                }
+            }
+        })
+    }
+
+    function stop() {
+        $.ajax({
+            type: 'GET',
+            url: 'app/stop',
+            async: false,
+            contentType: 'application/json',
+            dataType: 'json',
+            data: '',
+            success: function (res) {
+                if (res.value.code === 1) {
+                    success_prompt(res.value.msg, 1300)
+                    canUseBtn(true)
+                } else {
+                    fail_prompt(res.value.msg, 1300)
+                }
+            }
+        })
+    }
+
+
+    function insertDiv(size, select) {
+        if (select === undefined) {
+            select = true
+        }
+        for (let i = 0; i < size; i++) {
+            let num = arrDivSize + 1
+            let divText = '<div class="form-group" id="group' + num + '">' +
+                '<span class="input-group-addon">' +
+                '<label class="control-label col-sm-2">' +
+                '<input type="checkbox" id="step' + num + '" ' + (select ? 'checked' : '') + '>使用狀態' +
+                '</label>' +
+                '<label for="time' + num + '" class="col-sm-2 control-label">' + num + '.時間間隔(ms):</label>' +
+                '<div class="col-sm-2">' +
+                '<input type="number" class="form-control time_input" value="10" id="time' + num + '" placeholder="間隔">' +
+                '</div>' +
+                '<label for="btx' + num + '" class="col-sm-1 control-label">按鍵:</label>' +
+                '<div class="col-sm-2">' +
+                '<input type="number" readonly=“readonly” class="form-control time_input" id="btx' + num + '" placeholder="鍵碼" onkeydown="return noNumbers(event,this)">' +
+                '</div>' +
+                '<label for="errNum' + num + '" class="col-sm-1 control-label">容錯數:</label>' +
+                '<div class="col-sm-2">' +
+                '<input type="number" class="form-control time_input" id="errNum' + num + '" value="1" placeholder="容錯數">' +
+                '</div>' +
+                '</span>' +
+                '</div>'
+            $('#contentForm').append(divText)
+            arrDivSize++
+        }
+    }
+
+    function noNumbers(e, dom) {
+        $(dom).val(e.which)
+        $(dom).blur()
+        return false
+    }
+
+    function removeDiv(size) {
+        if (size > arrDivSize || arrDivSize <= 2) {
+            return
+        }
+        for (let i = 0; i < size; i++) {
+            $('#group' + arrDivSize).remove()
+            arrDivSize = arrDivSize - 1
+        }
+    }
+
+    function canUseBtn(is) {
+        $("#run").attr('disabled', !is)
+        $("#insertDiv").attr('disabled', !is)
+        $("#removeDiv").attr('disabled', !is)
+    }
+
+    function starTime() {
+        let time = $("#timer").val() + "s"
+        console.info('定時時間：' + time)
+        $('body').everyTime(time, tipsMusic);
+        success_prompt('定時已開啓', 1300)
+    }
+
+    function stopTime() {
+        $('body').stopTime();
+        success_prompt('定時已關閉', 1300)
+    }
+
+    function tipsMusic() {
+        let html = '最後提醒時間:' + timeFormat(new Date()) + '</br>'
+        $("#timeLog").append(html)
+        document.getElementById('timerMp3').play()
+    }
+
+    function clearTime() {
+        $("#timeLog").html('')
+        success_prompt('已清空時間', 1300)
+    }
+
+    function stopPlayMusic() {
+        let dom = document.getElementById('timerMp3')
+        dom.pause()
+        dom.currentTime = 0
+        success_prompt('已停止播放', 1300)
+    }
+
+    function timeFormat(data) {
+        if (data === undefined || data === null) {
+            return ''
+        }
+        //获取年
+        var year = data.getFullYear()
+        //获取月
+        var month = data.getMonth() + 1
+        //获取日
+        var day = data.getDate()
+        var hours = data.getHours() < 10 ? '0' + data.getHours() : data.getHours()
+        var minutes = data.getMinutes() < 10 ? '0' + data.getMinutes() : data.getMinutes()
+        var seconds = data.getSeconds() < 10 ? '0' + data.getSeconds() : data.getSeconds()
+        return year + "年" + month + "月" + day + "日" + " " + hours + ":" + minutes + ":" + seconds;
+    }
+
+</script>
+</html>
